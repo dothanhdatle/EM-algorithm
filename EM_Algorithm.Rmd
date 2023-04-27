@@ -1,0 +1,111 @@
+---
+title: "TD_EM_Algorithm"
+output: pdf_document
+date: "2022-12-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Do Thanh Dat LE
+
+Gan WANG
+
+# TD à rendre sur l'agorithme EM
+
+## Simulation
+
+###1.
+
+Simulate a sample of Poisson distribution with 100 observations and parameter $\lambda = 3$ 
+
+```{r}
+n1 <- 100
+lambda1 <- 3
+sample1 <- rpois(n1, lambda1)
+sample1
+```
+
+###2.
+
+Simulate a sample of Poisson distribution with 200 observations and parameter $\lambda = 15$ 
+
+```{r}
+n2 <- 200
+lambda2 <- 15
+sample2 <- rpois(n2, lambda2)
+sample2
+```
+
+###3.
+
+Create a vector with 300 integer value include 100 value "1" and followed by 200 value "2"
+
+```{r}
+z <- c(rep(1, 100), rep(2, 200))
+table(z)
+```
+
+###4. Simulate a mixture of two Poisson distribution components
+
+\[P(x)=\pi_1\dfrac{e^{-\lambda_1}}{x!}\lambda_1^{x}+\pi_2\dfrac{e^{-\lambda_2}}{x!}\lambda_2^{x}\] with $\lambda_1 = 3$ and $\lambda_2 = 15$, $\pi_1 = \dfrac{1}{3}$.
+
+```{r}
+N <- n1 + n2
+z <- sample(z)
+lambda <- c(3, 15)
+mixture <- rpois(N, lambda = lambda[z])
+mixture
+hist(mixture, breaks=15)
+```
+
+# Algorithme EM pour une mélange de lois de Poisson à composantes
+
+```{r}
+# Create function for EM algorithm for mixture model of Poisson distribution
+EM.algorithm <- function(X, K, lambda_0, epsilon) {
+  # EM Initialisation
+  pi_0 <- rep(1/K,K)
+  pi_q <- pi_0
+  lambda_q <- lambda_0
+  T <- matrix(NA, nrow = length(X), ncol = K)
+  while (TRUE) {
+    theta_q <- c(pi_q, lambda_q)
+    # E step
+    for (k in 1:K) {
+      T[,k] <- dpois(X, lambda = lambda_q[k])
+    }
+    for (k in 1:K) {
+      T[,k] <- pi_q[k]*T[,k]
+    }
+    T <- T / rowSums(T)
+    # M step
+    pi_new <- colSums(T)/sum(T)
+    lambda_new <- (X%*%T)/colSums(T)
+    theta_new <- c(pi_new, lambda_new)
+    delta = (norm(as.matrix(theta_new)-as.matrix(theta_q), 
+            type = "2"))^2/(norm(as.matrix(theta_q), type = "2"))^2
+    if (delta < epsilon) {
+      break
+    } else {
+      pi_q <- pi_new
+      lambda_q <- lambda_new
+    }
+  }
+  return(theta_new)
+}
+```
+
+#Test the EM algorithm
+```{r}
+result1 <- EM.algorithm(X = mixture, K = 2, lambda_0 = c(5,10), epsilon = 10^(-8))
+pi1 <- result1[1]
+pi2 <- result1[2]
+lambda1 <- result1[3]
+lambda2 <- result1[4]
+pi1
+pi2
+lambda1
+lambda2
+```
